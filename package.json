@@ -13,6 +13,8 @@
   "license": "ISC",
   "description": "An Electron application for converting audio to video",
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
     "fluent-ffmpeg": "^2.1.3",
     "music-metadata": "^11.7.3",
     "react": "^19.1.1",
@@ -35,17 +37,24 @@
   "build": {
     "appId": "com.example.audio2video",
     "productName": "audio2video",
+    "asarUnpack": [
+      "**/@ffmpeg-installer/**",
+      "**/@ffprobe-installer/**"
+    ],
     "files": [
       "dist/",
       "index.js",
       "preload.js",
       "package.json"
     ],
+    "icon": "assets/icons/logo.png",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "assets/icons/logo.png"
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "assets/icons/logo.png"
     },
     "linux": {
       "target": "AppImage",

@@ -7,6 +7,7 @@ function App() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('Idle');
   const [currentFile, setCurrentFile] = useState('');
+  const [isConverting, setIsConverting] = useState(false);
 
   const handleSelectInputFolder = async () => {
     const result = await window.electronAPI.selectFolders('Select Audio Folder');
@@ -33,6 +34,7 @@ function App() {
 
   const handleStartConversion = () => {
     if (inputPath && outputPath) {
+      setIsConverting(true);
       setStatus('Converting...');
       setProgress(0);
       setCurrentFile('');
@@ -42,48 +44,88 @@ function App() {
     }
   };
 
+  const handleStopConversion = () => {
+    setIsConverting(false);
+    setStatus('Conversion stopped');
+    setProgress(0);
+    setCurrentFile('');
+    window.electronAPI.stopConversion();
+  };
+
   useEffect(() => {
-    window.electronAPI.onConversionProgress(({ progress, file }) => {
+    window.electronAPI.onConversionProgress(({ progress, file, currentFileProgress }) => {
       setProgress(progress.toFixed(2));
       setCurrentFile(file);
+      if (currentFileProgress) {
+        // Remove duplicate "Converting..." by using currentFileProgress directly
+        setStatus(currentFileProgress);
+      }
     });
 
     window.electronAPI.onConversionComplete((path) => {
+      setIsConverting(false);
       setStatus(`Conversion complete! Files saved in: ${path}`);
       setProgress(100);
+    });
+
+    window.electronAPI.onConversionStopped(() => {
+      setIsConverting(false);
+      setStatus('Conversion stopped');
+      setProgress(0);
+      setCurrentFile('');
     });
   }, []);
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>Audio to Video Tool (Batch Processing)</h1>
+    <div className="container">
+      <div className="title">Audio to Video Converter</div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <button onClick={handleSelectInputFolder}>1. Select Audio Folder</button>
-        {inputPath && <p style={{ wordBreak: 'break-all' }}>{inputPath}</p>}
-      </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <button onClick={handleSelectImage}>2. Select Cover Image (Optional)</button>
-        {imagePath && <img src={imagePath} alt="Cover" style={{ maxWidth: '200px', display: 'block', marginTop: '10px' }} />}
-      </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <button onClick={handleSelectOutputFolder}>3. Select Output Folder</button>
-        {outputPath && <p style={{ wordBreak: 'break-all', color: 'green' }}>{outputPath}</p>}
-      </div>
-
-      <button onClick={handleStartConversion} disabled={!inputPath || !outputPath || status === 'Converting...'}>4. Start Conversion</button>
-
-      <div style={{ marginTop: '20px' }}>
-        <h3>Status: {status}</h3>
-        {(status === 'Converting...' || progress > 0) && (
+      <div className="card">
+        <div className="steps">
           <div>
-            <p>Current File: {currentFile}</p>
-            <progress value={progress} max="100" style={{ width: '100%' }}></progress>
-            <span>{progress}%</span>
+            <button className="btn" onClick={handleSelectInputFolder} disabled={isConverting}>1. Select Audio Folder</button>
           </div>
-        )}
+          <div>
+            {inputPath && <div className="path">{inputPath}</div>}
+          </div>
+
+          <div>
+            <button className="btn" onClick={handleSelectImage} disabled={isConverting}>2. Select Cover Image (Optional)</button>
+          </div>
+          <div>
+            {imagePath && <img className="preview" src={imagePath} alt="Cover" />}
+          </div>
+
+          <div>
+            <button className="btn" onClick={handleSelectOutputFolder} disabled={isConverting}>3. Select Output Folder</button>
+          </div>
+          <div>
+            {outputPath && <div className="path">{outputPath}</div>}
+          </div>
+          <div>
+            <button
+              className="btn btn-primary"
+              onClick={isConverting ? handleStopConversion : handleStartConversion}
+              disabled={!inputPath || !outputPath}
+            >
+              {isConverting ? 'Stop Conversion' : '4. Start Conversion'}
+            </button>
+            <div className="tips">Tip: Use built-in placeholder if no cover is selected</div>
+          </div>
+        </div>
+
+        <div className="status">
+          <h3>Status: {status}</h3>
+          {(status.includes('Converting') || progress > 0) && (
+            <div>
+              <div className="path">Current File: {currentFile || '-'}</div>
+              <progress value={progress} max="100"></progress>
+              <div className="path">Overall Progress: {progress}%</div>
+            </div>
+          )}
+        </div>
+
+        <div className="footer">Designed for simplicity · batch convert audio to video</div>
       </div>
     </div>
   );

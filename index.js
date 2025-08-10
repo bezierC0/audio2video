@@ -1,11 +1,17 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const ffmpeg = require('fluent-ffmpeg');
+const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
 
-async function handleFolderOpen(event, title) { // Modified to accept title from ipcRenderer
+// Configure bundled ffmpeg/ffprobe binaries so the app works without system installation
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+ffmpeg.setFfprobePath(ffprobeInstaller.path);
+
+async function handleFolderOpen(title) {
   const { canceled, filePaths } = await dialog.showOpenDialog({
-    title: title, // Use the title passed from the renderer process
+    title: title,
     properties: ['openDirectory'],
   });
   if (canceled) {
@@ -29,8 +35,13 @@ async function handleImageOpen() {
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 720,
+    height: 520,
+    icon: path.join(__dirname, 'assets', 'icons', 'logo.png'),
+    backgroundColor: '#ffffff',
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -46,8 +57,31 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Set minimal menu: keep only File
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'File',
+      submenu: [
+        { role: 'quit', label: process.platform === 'darwin' ? 'Quit' : 'Exit' },
+      ],
+    },
+  ]);
+  Menu.setApplicationMenu(menu);
   ipcMain.handle('dialog:openFolder', (event, title) => handleFolderOpen(title));
   ipcMain.handle('dialog:openImage', handleImageOpen);
+  
+  let currentConversion = null;
+  let isConversionStopped = false;
+  
+  ipcMain.on('stop-conversion', (event) => {
+    isConversionStopped = true;
+    if (currentConversion) {
+      currentConversion.kill('SIGKILL');
+      currentConversion = null;
+    }
+    event.sender.send('conversion-stopped');
+  });
+  
   ipcMain.on('start-conversion', async (event, { inputPath, imagePath, outputPath }) => {
     if (!inputPath || !outputPath) {
       console.error('Input or output path is not defined.');
@@ -55,19 +89,35 @@ app.whenReady().then(() => {
     }
 
     try {
+      isConversionStopped = false;
       const files = await fs.readdir(inputPath);
       const audioFiles = files.filter(file => /\.(mp3|flac|wav|aac|ogg)$/i.test(file));
       const totalFiles = audioFiles.length;
       let completedFiles = 0;
 
       for (const file of audioFiles) {
+        // Check if conversion was stopped
+        if (isConversionStopped) {
+          break;
+        }
+        
         const inputFilePath = path.join(inputPath, file);
         const outputFileName = `${path.parse(file).name}.mp4`;
         const outputFilePath = path.join(outputPath, outputFileName);
 
+        // Send current file info immediately when starting conversion
+        event.sender.send('conversion-progress', { 
+          progress: (completedFiles / totalFiles) * 100, 
+          file: outputFileName,
+          currentFileProgress: 'Starting...'
+        });
+
         await new Promise((resolve, reject) => {
-          ffmpeg()
-            .addInput(imagePath || path.join(__dirname, 'placeholder.png'))
+          const startTime = Date.now();
+          let lastProgressUpdate = 0;
+
+          const ffmpegCommand = ffmpeg()
+            .addInput(imagePath || path.join(__dirname, 'data', 'cover.png'))
             .loop()
             .addInput(inputFilePath)
             .videoCodec('libx264')
@@ -77,17 +127,48 @@ app.whenReady().then(() => {
             .size('1920x1080')
             .outputOptions('-pix_fmt yuv420p')
             .outputOptions('-shortest')
+            .on('progress', (progress) => {
+              // Check if conversion was stopped
+              if (isConversionStopped) {
+                ffmpegCommand.kill('SIGKILL');
+                return;
+              }
+              
+              // Update progress every 500ms to avoid too many updates
+              const now = Date.now();
+              if (now - lastProgressUpdate > 500) {
+                const elapsed = Math.floor((now - startTime) / 1000);
+                const timeStr = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')}`;
+                event.sender.send('conversion-progress', { 
+                  progress: (completedFiles / totalFiles) * 100, 
+                  file: outputFileName,
+                  currentFileProgress: `Converting... ${timeStr}`
+                });
+                lastProgressUpdate = now;
+              }
+            })
             .on('end', () => {
+              if (isConversionStopped) {
+                reject(new Error('Conversion stopped by user'));
+                return;
+              }
+              
               completedFiles++;
               const progress = (completedFiles / totalFiles) * 100;
-              event.sender.send('conversion-progress', { progress, file: outputFileName });
+              event.sender.send('conversion-progress', { 
+                progress, 
+                file: outputFileName,
+                currentFileProgress: 'Completed'
+              });
               resolve();
             })
             .on('error', (err) => {
               console.error(`Error converting ${file}:`, err);
               reject(err);
-            })
-            .save(outputFilePath);
+            });
+
+          currentConversion = ffmpegCommand;
+          ffmpegCommand.save(outputFilePath);
         });
       }
       event.sender.send('conversion-complete', outputPath);
