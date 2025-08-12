@@ -50,10 +50,29 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
+  // 修复文件加载路径，支持开发和生产环境
+  const htmlPath = path.join(__dirname, 'dist', 'index.html');
+  console.log('Loading HTML file from:', htmlPath);
+  
+  // 检查文件是否存在
+  if (require('fs').existsSync(htmlPath)) {
+    mainWindow.loadFile(htmlPath);
+  } else {
+    console.error('HTML file not found at:', htmlPath);
+    // 尝试备用路径
+    const altPath = path.join(__dirname, 'index.html');
+    if (require('fs').existsSync(altPath)) {
+      mainWindow.loadFile(altPath);
+    } else {
+      console.error('Backup HTML file also not found');
+      mainWindow.loadURL('data:text/html,<h1>Error: HTML file not found</h1>');
+    }
+  }
 
-  // debug tool
-  //mainWindow.webContents.openDevTools();
+  // debug tool - 在开发环境下启用
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.openDevTools();
+  }
 }
 
 app.whenReady().then(() => {

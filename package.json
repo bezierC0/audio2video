@@ -6,7 +6,8 @@
     "start": "electron .",
     "build": "webpack --mode production",
     "watch": "webpack --mode development --watch",
-    "package": "electron-builder"
+    "package": "npm run build && electron-builder",
+    "dist": "npm run build && electron-builder --publish=never"
   },
   "keywords": [],
   "author": "",
@@ -42,11 +43,17 @@
       "**/@ffprobe-installer/**"
     ],
     "files": [
-      "dist/",
+      "dist/**/*",
       "index.js",
       "preload.js",
-      "package.json"
+      "package.json",
+      "assets/**/*",
+      "data/**/*"
     ],
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
     "icon": "assets/icons/logo.png",
     "win": {
       "target": "nsis",
