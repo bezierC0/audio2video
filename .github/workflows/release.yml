@@ -28,6 +28,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Linux dependencies (Ubuntu only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse libfuse2
+          sudo modprobe fuse
+          sudo chmod 666 /dev/fuse
+          sudo chown root:fuse /dev/fuse
+
       - name: Build application
         run: npm run build
         env:
