@@ -33,7 +33,8 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Verify build output
+      - name: Verify build output (Unix)
+        if: runner.os != 'Windows'
         run: |
           echo "Checking if dist directory exists:"
           ls -la dist/
@@ -41,6 +42,16 @@ jobs:
           ls -la dist/index.html
           echo "Checking if bundle.js exists:"
           ls -la dist/bundle.js
+
+      - name: Verify build output (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "Checking if dist directory exists:"
+          Get-ChildItem -Path "dist" -Force
+          echo "Checking if index.html exists:"
+          Get-ChildItem -Path "dist/index.html" -Force
+          echo "Checking if bundle.js exists:"
+          Get-ChildItem -Path "dist/bundle.js" -Force
 
       - name: Package the application
         env:
