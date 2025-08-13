@@ -35,8 +35,8 @@ async function handleImageOpen() {
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 720,
-    height: 520,
+    width: 760,
+    height: 640,
     icon: path.join(__dirname, 'assets', 'icons', 'logo.png'),
     backgroundColor: '#ffffff',
     resizable: false,
@@ -84,10 +84,27 @@ app.whenReady().then(() => {
         { role: 'quit', label: process.platform === 'darwin' ? 'Quit' : 'Exit' },
       ],
     },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'About',
+          click: () => {
+            const version = app.getVersion();
+            dialog.showMessageBox({
+              type: 'info',
+              title: 'About',
+              message: `Audio to Video Batch Tool\nVersion: ${version}`,
+            });
+          }
+        },
+      ],
+    }
   ]);
   Menu.setApplicationMenu(menu);
   ipcMain.handle('dialog:openFolder', (event, title) => handleFolderOpen(title));
   ipcMain.handle('dialog:openImage', handleImageOpen);
+  ipcMain.handle('app:getVersion', async () => app.getVersion());
   
   let currentConversion = null;
   let isConversionStopped = false;
@@ -101,7 +118,7 @@ app.whenReady().then(() => {
     event.sender.send('conversion-stopped');
   });
   
-  ipcMain.on('start-conversion', async (event, { inputPath, imagePath, outputPath }) => {
+  ipcMain.on('start-conversion', async (event, { inputPath, imagePath, outputPath, settings }) => {
     if (!inputPath || !outputPath) {
       console.error('Input or output path is not defined.');
       return;
@@ -139,13 +156,13 @@ app.whenReady().then(() => {
             .addInput(imagePath || path.join(__dirname, 'data', 'cover.png'))
             .loop()
             .addInput(inputFilePath)
-            .videoCodec('libx264')
-            .audioCodec('aac')
-            .audioBitrate('192k')
-            .videoBitrate('2500k')
-            .size('1920x1080')
+            .videoCodec((settings && settings.videoCodec) || 'libx264')
+            .audioCodec((settings && settings.audioCodec) || 'aac')
+            .videoBitrate((settings && settings.videoBitrate) || '2500k')
+            .size((settings && settings.size) || '1920x1080')
             .outputOptions('-pix_fmt yuv420p')
             .outputOptions('-shortest')
+            .outputOptions([`-r ${settings && settings.fps ? settings.fps : 30}`])
             .on('progress', (progress) => {
               // Check if conversion was stopped
               if (isConversionStopped) {
@@ -185,6 +202,11 @@ app.whenReady().then(() => {
               console.error(`Error converting ${file}:`, err);
               reject(err);
             });
+
+          // Apply audio bitrate only when not copying audio
+          if (!settings || settings.audioCodec !== 'copy') {
+            ffmpegCommand.audioBitrate((settings && settings.audioBitrate) || '192k');
+          }
 
           currentConversion = ffmpegCommand;
           ffmpegCommand.save(outputFilePath);

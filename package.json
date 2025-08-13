@@ -1,13 +1,16 @@
 {
   "name": "audio2video",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "index.js",
   "scripts": {
     "start": "electron .",
     "build": "webpack --mode production",
     "watch": "webpack --mode development --watch",
     "package": "npm run build && electron-builder",
-    "dist": "npm run build && electron-builder --publish=never"
+    "dist": "npm run build && electron-builder --publish=never",
+    "bump:patch": "npm version patch --no-git-tag-version",
+    "bump:minor": "npm version minor --no-git-tag-version",
+    "bump:major": "npm version major --no-git-tag-version"
   },
   "keywords": [],
   "author": "",

@@ -8,6 +8,17 @@ function App() {
   const [status, setStatus] = useState('Idle');
   const [currentFile, setCurrentFile] = useState('');
   const [isConverting, setIsConverting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [settings, setSettings] = useState({
+    videoCodec: 'libx264',
+    audioCodec: 'aac',
+    audioBitrate: '192k',
+    videoBitrate: '2500k',
+    size: '1920x1080',
+    fps: 30,
+  });
+
+  const [appVersion, setAppVersion] = useState('');
 
   const handleSelectInputFolder = async () => {
     const result = await window.electronAPI.selectFolders('Select Audio Folder');
@@ -38,7 +49,7 @@ function App() {
       setStatus('Converting...');
       setProgress(0);
       setCurrentFile('');
-      window.electronAPI.startConversion({ inputPath, imagePath, outputPath });
+      window.electronAPI.startConversion({ inputPath, imagePath, outputPath, settings });
     } else {
       setStatus('Please select input and output folders first');
     }
@@ -53,6 +64,10 @@ function App() {
   };
 
   useEffect(() => {
+    // Restore: get app version from main process (single source from package.json)
+    if (window.electronAPI && window.electronAPI.getAppVersion) {
+      window.electronAPI.getAppVersion().then((v) => setAppVersion(v)).catch(() => {});
+    }
     window.electronAPI.onConversionProgress(({ progress, file, currentFileProgress }) => {
       setProgress(progress.toFixed(2));
       setCurrentFile(file);
@@ -64,7 +79,7 @@ function App() {
 
     window.electronAPI.onConversionComplete((path) => {
       setIsConverting(false);
-      setStatus(`Conversion complete! Files saved in: ${path}`);
+      setStatus(`complete!`);
       setProgress(100);
     });
 
@@ -108,9 +123,89 @@ function App() {
               onClick={isConverting ? handleStopConversion : handleStartConversion}
               disabled={!inputPath || !outputPath}
             >
-              {isConverting ? 'Stop Conversion' : '4. Start Conversion'}
+              {isConverting ? 'Stop' : '4. Start'}
             </button>
             <div className="tips">Tip: Use built-in placeholder if no cover is selected</div>
+          </div>
+          <div className="settings">
+            <details open={showAdvanced} onToggle={(e) => setShowAdvanced(e.currentTarget.open)}>
+              <summary>Advanced Settings (Optional)</summary>
+              <div className="settings-grid">
+                <label>
+                  <span>Video Codec</span>
+                  <select
+                    disabled={isConverting}
+                    value={settings.videoCodec}
+                    onChange={(e) => setSettings({ ...settings, videoCodec: e.target.value })}
+                  >
+                    <option value="libx264">H.264 (libx264)</option>
+                    <option value="libx265">H.265 (libx265)</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Video Bitrate</span>
+                  <select
+                    disabled={isConverting}
+                    value={settings.videoBitrate}
+                    onChange={(e) => setSettings({ ...settings, videoBitrate: e.target.value })}
+                  >
+                    <option value="1500k">1500k</option>
+                    <option value="2500k">2500k</option>
+                    <option value="4000k">4000k</option>
+                    <option value="8000k">8000k</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Resolution</span>
+                  <select
+                    disabled={isConverting}
+                    value={settings.size}
+                    onChange={(e) => setSettings({ ...settings, size: e.target.value })}
+                  >
+                    <option value="1920x1080">1920x1080</option>
+                    <option value="1280x720">1280x720</option>
+                    <option value="1080x1080">1080x1080</option>
+                    <option value="2560x1440">2560x1440</option>
+                  </select>
+                </label>
+                <label>
+                  <span>FPS</span>
+                  <select
+                    disabled={isConverting}
+                    value={settings.fps}
+                    onChange={(e) => setSettings({ ...settings, fps: Number(e.target.value) })}
+                  >
+                    <option value={24}>24</option>
+                    <option value={25}>25</option>
+                    <option value={30}>30</option>
+                    <option value={60}>60</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Audio Codec</span>
+                  <select
+                    disabled={isConverting}
+                    value={settings.audioCodec}
+                    onChange={(e) => setSettings({ ...settings, audioCodec: e.target.value })}
+                  >
+                    <option value="aac">AAC</option>
+                    <option value="libmp3lame">MP3 (libmp3lame)</option>
+                    <option value="flac">FLAC</option>
+                    <option value="copy">Copy (no re-encode)</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Audio Bitrate</span>
+                  <input
+                    disabled={isConverting || settings.audioCodec === 'copy'}
+                    type="text"
+                    value={settings.audioBitrate}
+                    onChange={(e) => setSettings({ ...settings, audioBitrate: e.target.value })}
+                    placeholder="e.g. 192k"
+                  />
+                </label>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -124,8 +219,6 @@ function App() {
             </div>
           )}
         </div>
-
-        <div className="footer">Designed for simplicity · batch convert audio to video</div>
       </div>
     </div>
   );

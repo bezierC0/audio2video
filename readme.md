@@ -30,9 +30,21 @@ This is a simple tool to merge an audio file and a static image into a video fil
 
 ## Input Formats
 
--   **Audio File:** Supports common audio formats like `.mp3`, `.wav`, `.ogg`, etc.
--   **Image File:** Supports common image formats like `.png`, `.jpg`, `.jpeg`, etc.
+| Type | Formats | 
+| --- | --- |
+| Audio File | .mp3 |
+|            | .flac |
+|            | .wav |
+|            | .aac |
+|            | .ogg |
+| Image File | .jpg |
+|            | .png |
+|            | .bmp |
+|            | .gif |
 
 ## Output Format
 
 -   **Video File:** The generated video file will be in `.mp4` format.
+
+## License
+[MIT](./LICENSE)

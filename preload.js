@@ -10,4 +10,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onConversionProgress: (callback) => ipcRenderer.on('conversion-progress', (_event, value) => callback(value)),
   onConversionComplete: (callback) => ipcRenderer.on('conversion-complete', (_event, value) => callback(value)),
   onConversionStopped: (callback) => ipcRenderer.on('conversion-stopped', (_event, value) => callback(value)),
+  getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
 });
