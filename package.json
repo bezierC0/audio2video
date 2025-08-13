@@ -11,7 +11,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "description": "An Electron application for converting audio to video",
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
