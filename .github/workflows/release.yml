@@ -105,7 +105,7 @@ jobs:
             artifacts/windows-latest-build/*.exe
             artifacts/windows-latest-build/*.msi
             artifacts/macos-latest-build/*.dmg
-            artifacts/linux-latest-build/*.AppImage
+            artifacts/ubuntu-latest-build/*.AppImage
           tag_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
