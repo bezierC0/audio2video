@@ -24,7 +24,7 @@ async function handleFolderOpen(title) {
 async function handleImageOpen() {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     properties: ['openFile'],
-    filters: [{ name: 'Images', extensions: ['jpg', 'png', 'bmp', 'gif'] }],
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'bmp', 'gif'] }],
   });
   if (canceled) {
     return;
@@ -50,16 +50,16 @@ function createWindow() {
     },
   });
 
-  // 修复文件加载路径，支持开发和生产环境
+  // fix file path
   const htmlPath = path.join(__dirname, 'dist', 'index.html');
   console.log('Loading HTML file from:', htmlPath);
   
-  // 检查文件是否存在
+  // check file exist
   if (require('fs').existsSync(htmlPath)) {
     mainWindow.loadFile(htmlPath);
   } else {
     console.error('HTML file not found at:', htmlPath);
-    // 尝试备用路径
+    // backup path
     const altPath = path.join(__dirname, 'index.html');
     if (require('fs').existsSync(altPath)) {
       mainWindow.loadFile(altPath);
@@ -69,7 +69,7 @@ function createWindow() {
     }
   }
 
-  // debug tool - 在开发环境下启用
+  // debug tool 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
   }
@@ -127,7 +127,7 @@ app.whenReady().then(() => {
     try {
       isConversionStopped = false;
       const files = await fs.readdir(inputPath);
-      const audioFiles = files.filter(file => /\.(mp3|flac|wav|aac|ogg)$/i.test(file));
+      const audioFiles = files.filter(file => /\.(mp3|flac|wav|aac|ogg|m4a)$/i.test(file));
       const totalFiles = audioFiles.length;
       let completedFiles = 0;
 

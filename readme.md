@@ -34,10 +34,12 @@ This is a simple tool to merge an audio file and a static image into a video fil
 | --- | --- |
 | Audio File | .mp3 |
 |            | .flac |
+|            | .m4a |
 |            | .wav |
 |            | .aac |
 |            | .ogg |
 | Image File | .jpg |
+|            | .jpeg |
 |            | .png |
 |            | .bmp |
 |            | .gif |
